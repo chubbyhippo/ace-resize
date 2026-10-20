@@ -10,6 +10,7 @@ build/
 
 # IDE
 out/
+.idea/
 
 # OS
 .DS_Store
