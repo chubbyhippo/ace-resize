@@ -1,0 +1,18 @@
+<idea-plugin>
+    <id>io.github.chubbyhippo.ace-resize</id>
+    <name>Ace Resize</name>
+    <vendor>Chubby Hippo</vendor>
+    <description><![CDATA[
+        Resize editor splitters and visible tool windows using selectable divider labels.
+    ]]></description>
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.lang</depends>
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="io.github.chubbyhippo.aceresize.AceResizeLifecycle"/>
+        <rawEditorTypedHandler implementationClass="io.github.chubbyhippo.aceresize.AceResizeTypedHandler"/>
+    </extensions>
+    <actions>
+        <action id="AceResize.Resize" class="io.github.chubbyhippo.aceresize.AceResizeAction"
+                text="Ace Resize" description="Resize an editor splitter or tool window"/>
+    </actions>
+</idea-plugin>
