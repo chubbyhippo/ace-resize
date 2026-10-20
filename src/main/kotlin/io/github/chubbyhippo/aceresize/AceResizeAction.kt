@@ -402,17 +402,20 @@ object AceResize {
             val g = graphics as Graphics2D
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
             g.font = g.font.deriveFont(Font.BOLD)
-            val metrics = g.fontMetrics
             entries.forEach { (center, label) ->
                 val point = center() ?: return@forEach
-                val width = metrics.stringWidth(label) + 2
-                val height = metrics.height
+                val padding = 4
+                val glyphBounds = g.font.createGlyphVector(g.fontRenderContext, label).visualBounds
+                val width = kotlin.math.ceil(glyphBounds.width).toInt() + padding * 2
+                val height = kotlin.math.ceil(glyphBounds.height).toInt() + padding * 2
                 val x = point.x - width / 2
                 val y = point.y - height / 2
+                val baselineX = x + padding - glyphBounds.x
+                val baselineY = y + padding - glyphBounds.y
                 g.color = java.awt.Color(0x2E, 0x34, 0x40)
                 g.fillRect(x, y, width, height)
                 g.color = java.awt.Color.WHITE
-                g.drawString(label, x + 1, y + metrics.ascent)
+                g.drawString(label, baselineX.toFloat(), baselineY.toFloat())
             }
         }
     }
