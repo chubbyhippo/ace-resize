@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugins>
+    <plugin id="io.github.chubbyhippo.ace-resize"
+            url="https://github.com/chubbyhippo/ace-resize/releases/download/v0.1.0/ace-resize-v0.1.0.zip"
+            version="0.1.0">
+        <idea-version since-build="261"/>
+    </plugin>
+</plugins>
