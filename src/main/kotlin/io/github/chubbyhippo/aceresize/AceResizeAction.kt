@@ -7,7 +7,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.ex.ActionManagerEx
-import com.intellij.openapi.application.WriteIntentReadAction
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.actionSystem.TypedActionHandler
@@ -33,6 +33,7 @@ import javax.swing.SwingUtilities
 class AceResizeAction : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val editor = CommonDataKeys.EDITOR.getData(event.dataContext) ?: return
+        ApplicationManager.getApplication().getService(AceResizeLifecycle::class.java)
         AceResize.start(editor)
     }
 }
@@ -139,15 +140,34 @@ object AceResize {
     }
 
     private fun dispatch(event: AWTEvent): Boolean {
-        if (event !is KeyEvent || event.isConsumed || event.id != KeyEvent.KEY_PRESSED) return false
+        if (event !is KeyEvent) return false
         val active = session ?: return false
+        if (event.id == KeyEvent.KEY_TYPED && event.modifiersEx == 0) {
+            event.consume()
+            return true
+        }
+        if (event.id != KeyEvent.KEY_PRESSED) return false
         if (event.keyCode == KeyEvent.VK_ESCAPE && event.modifiersEx == 0) {
+            event.consume()
             cancel()
             return true
         }
         val direction = arrowDir(event)
         if (active.phase == Phase.HOLD && direction != null) {
+            event.consume()
             resize(active, direction)
+            return true
+        }
+        val char = keyChar(event)
+        if (active.phase == Phase.PICK && char != null) {
+            event.consume()
+            pick(active, char)
+            return true
+        }
+        if (active.phase == Phase.HOLD && event.modifiersEx == 0) {
+            event.consume()
+            val vimDirection = char?.let(::vimDir)
+            if (vimDirection != null) resize(active, vimDirection) else cancel()
             return true
         }
         return false
@@ -178,7 +198,9 @@ object AceResize {
     ) {
         val target = active.picked ?: return
         if (accepts(target.axis, dir)) {
-            WriteIntentReadAction.run { target.resize(dir) }
+            ApplicationManager.getApplication().invokeLater {
+                if (session === active) target.resize(dir)
+            }
             active.canvases.forEach { it.repaint() }
         }
     }
@@ -332,6 +354,11 @@ object AceResize {
             'k' -> Dir.UP
             else -> null
         }
+
+    private fun keyChar(event: KeyEvent): Char? {
+        if (event.modifiersEx != 0 || event.keyCode !in KeyEvent.VK_A..KeyEvent.VK_Z) return null
+        return ('a'.code + event.keyCode - KeyEvent.VK_A).toChar()
+    }
 
     private fun visibleComponents(root: Component): List<Component> {
         val result = mutableListOf<Component>()
