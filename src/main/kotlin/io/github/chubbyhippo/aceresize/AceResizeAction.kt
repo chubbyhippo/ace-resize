@@ -63,10 +63,16 @@ class AceResizeLifecycle : Disposable {
     }
 }
 
+@Suppress("TooManyFunctions")
 object AceResize {
     const val STEP = 0.05f
     const val MIN_PROPORTION = 0.05f
     private const val LABEL_KEYS = "asdfghjkl"
+    private const val ORDER_Y_MULTIPLIER = 100_000
+    private const val LABEL_PADDING = 4
+    private const val COLOR_RED = 0x2E
+    private const val COLOR_GREEN = 0x34
+    private const val COLOR_BLUE = 0x40
 
     enum class Dir { LEFT, RIGHT, DOWN, UP }
 
@@ -115,13 +121,18 @@ object AceResize {
     }
 
     fun start(editor: Editor) {
-        val frame = SwingUtilities.getWindowAncestor(editor.component) ?: return
-        val layer = (frame as? RootPaneContainer)?.rootPane?.layeredPane ?: return
-        val targets = ordered(splitterTargets(frame, layer) + toolWindowTargets(editor, frame, layer))
+        val frame = SwingUtilities.getWindowAncestor(editor.component)
+        val layer = (frame as? RootPaneContainer)?.rootPane?.layeredPane
+        val targets = if (frame != null && layer != null) findTargets(editor, frame, layer) else emptyList()
         cancel()
-        if (targets.isEmpty()) return
-        session = Session(targets).also(::paintLabels)
+        targets.takeIf(List<Target>::isNotEmpty)?.let { session = Session(it).also(::paintLabels) }
     }
+
+    private fun findTargets(
+        editor: Editor,
+        frame: Window,
+        layer: JLayeredPane,
+    ): List<Target> = ordered(splitterTargets(frame, layer) + toolWindowTargets(editor, frame, layer))
 
     fun cancel() {
         session?.canvases?.forEach(::detach)
@@ -139,38 +150,74 @@ object AceResize {
         return true
     }
 
-    private fun dispatch(event: AWTEvent): Boolean {
-        if (event !is KeyEvent) return false
-        val active = session ?: return false
-        if (event.id == KeyEvent.KEY_TYPED && event.modifiersEx == 0) {
-            event.consume()
-            return true
+    private fun dispatch(event: AWTEvent): Boolean =
+        (event as? KeyEvent)?.let { keyEvent ->
+            session?.let { active -> dispatchKey(active, keyEvent) } ?: false
+        } ?: false
+
+    private fun dispatchKey(
+        active: Session,
+        event: KeyEvent,
+    ): Boolean =
+        when (event.id) {
+            KeyEvent.KEY_TYPED -> event.takeIf { it.modifiersEx == 0 }?.let(::consume) ?: false
+            KeyEvent.KEY_PRESSED -> dispatchPressed(active, event)
+            else -> false
         }
-        if (event.id != KeyEvent.KEY_PRESSED) return false
-        if (event.keyCode == KeyEvent.VK_ESCAPE && event.modifiersEx == 0) {
-            event.consume()
-            cancel()
-            return true
-        }
-        val direction = arrowDir(event)
-        if (active.phase == Phase.HOLD && direction != null) {
-            event.consume()
-            resize(active, direction)
-            return true
-        }
-        val char = keyChar(event)
-        if (active.phase == Phase.PICK && char != null) {
-            event.consume()
-            pick(active, char)
-            return true
-        }
-        if (active.phase == Phase.HOLD && event.modifiersEx == 0) {
-            event.consume()
-            val vimDirection = char?.let(::vimDir)
-            if (vimDirection != null) resize(active, vimDirection) else cancel()
-            return true
-        }
-        return false
+
+    private fun dispatchPressed(
+        active: Session,
+        event: KeyEvent,
+    ): Boolean =
+        escape(event) ||
+            heldArrow(active, event) ||
+            pickedLabel(active, event) ||
+            heldVimDirection(active, event)
+
+    private fun escape(event: KeyEvent): Boolean =
+        event
+            .takeIf { it.keyCode == KeyEvent.VK_ESCAPE && it.modifiersEx == 0 }
+            ?.let { consume(it) { cancel() } }
+            ?: false
+
+    private fun heldArrow(
+        active: Session,
+        event: KeyEvent,
+    ): Boolean =
+        arrowDir(event)
+            ?.takeIf { active.phase == Phase.HOLD }
+            ?.let { direction -> consume(event) { resize(active, direction) } }
+            ?: false
+
+    private fun pickedLabel(
+        active: Session,
+        event: KeyEvent,
+    ): Boolean =
+        keyChar(event)
+            ?.takeIf { active.phase == Phase.PICK }
+            ?.let { char -> consume(event) { pick(active, char) } }
+            ?: false
+
+    private fun heldVimDirection(
+        active: Session,
+        event: KeyEvent,
+    ): Boolean =
+        event
+            .takeIf { active.phase == Phase.HOLD && it.modifiersEx == 0 }
+            ?.let {
+                consume(event) {
+                    keyChar(event)?.let(::vimDir)?.let { direction -> resize(active, direction) } ?: cancel()
+                }
+            }
+            ?: false
+
+    private fun consume(
+        event: KeyEvent,
+        action: () -> Unit = {},
+    ): Boolean {
+        event.consume()
+        action()
+        return true
     }
 
     private fun pick(
@@ -206,7 +253,7 @@ object AceResize {
     }
 
     private fun ordered(targets: List<Target>): List<Target> =
-        targets.sortedBy { target -> target.center()?.let { it.x * 100_000 + it.y } ?: Int.MAX_VALUE }
+        targets.sortedBy { target -> target.center()?.let { it.x * ORDER_Y_MULTIPLIER + it.y } ?: Int.MAX_VALUE }
 
     private fun splitterTargets(
         frame: Window,
@@ -414,7 +461,7 @@ object AceResize {
             g.font = g.font.deriveFont(Font.BOLD)
             entries.forEach { (center, label) ->
                 val point = center() ?: return@forEach
-                val padding = 4
+                val padding = LABEL_PADDING
                 val glyphBounds = g.font.createGlyphVector(g.fontRenderContext, label).visualBounds
                 val width = kotlin.math.ceil(glyphBounds.width).toInt() + padding * 2
                 val height = kotlin.math.ceil(glyphBounds.height).toInt() + padding * 2
@@ -422,7 +469,7 @@ object AceResize {
                 val y = point.y - height / 2
                 val baselineX = x + padding - glyphBounds.x
                 val baselineY = y + padding - glyphBounds.y
-                g.color = java.awt.Color(0x2E, 0x34, 0x40)
+                g.color = java.awt.Color(COLOR_RED, COLOR_GREEN, COLOR_BLUE)
                 g.fillRect(x, y, width, height)
                 g.color = java.awt.Color.WHITE
                 g.drawString(label, baselineX.toFloat(), baselineY.toFloat())
