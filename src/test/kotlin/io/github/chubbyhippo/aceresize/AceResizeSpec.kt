@@ -23,13 +23,14 @@ class AceResizeSpec : BasePlatformTestCase() {
         val method =
             AceResize::class.java.getDeclaredMethod(
                 name,
-                *arguments.map { argument ->
-                    when (argument.javaClass) {
-                        java.lang.Character::class.java -> Char::class.javaPrimitiveType
-                        java.lang.Integer::class.java -> Int::class.javaPrimitiveType
-                        else -> argument.javaClass
-                    }
-                }.toTypedArray(),
+                *arguments
+                    .map { argument ->
+                        when (argument.javaClass) {
+                            java.lang.Character::class.java -> Char::class.javaPrimitiveType
+                            java.lang.Integer::class.java -> Int::class.javaPrimitiveType
+                            else -> argument.javaClass
+                        }
+                    }.toTypedArray(),
             )
         method.isAccessible = true
         @Suppress("UNCHECKED_CAST")

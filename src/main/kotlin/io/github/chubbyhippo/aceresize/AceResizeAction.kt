@@ -220,8 +220,11 @@ object AceResize {
                 val axis = if (splitter.isVertical) Axis.VERTICAL else Axis.HORIZONTAL
                 target(layer, axis, {
                     val spot =
-                        if (splitter.isVertical) Rectangle(0, first.y + first.height, splitter.width, 1)
-                        else Rectangle(first.x + first.width, 0, 1, splitter.height)
+                        if (splitter.isVertical) {
+                            Rectangle(0, first.y + first.height, splitter.width, 1)
+                        } else {
+                            Rectangle(first.x + first.width, 0, 1, splitter.height)
+                        }
                     val rect = SwingUtilities.convertRectangle(splitter, spot, layer)
                     Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
                 }) { dir ->
@@ -269,7 +272,12 @@ object AceResize {
     ): Point? {
         if (!area.isShowing || !toolWindow.isShowing) return null
         val areaRect = SwingUtilities.convertRectangle(area, Rectangle(0, 0, area.width, area.height), layer)
-        val toolWindowRect = SwingUtilities.convertRectangle(toolWindow, Rectangle(0, 0, toolWindow.width, toolWindow.height), layer)
+        val toolWindowRect =
+            SwingUtilities.convertRectangle(
+                toolWindow,
+                Rectangle(0, 0, toolWindow.width, toolWindow.height),
+                layer,
+            )
         return when (anchor) {
             ToolWindowAnchor.LEFT -> Point(areaRect.x, toolWindowRect.y + toolWindowRect.height / 2)
             ToolWindowAnchor.RIGHT -> Point(areaRect.x + areaRect.width, toolWindowRect.y + toolWindowRect.height / 2)
@@ -284,7 +292,8 @@ object AceResize {
         active.targets.forEachIndexed { index, target ->
             val label = labelFor(index)
             if (label.startsWith(active.prefix)) {
-                active.canvases += layerCanvas(target.layer, ResizeBadges(listOf(target.center to label.removePrefix(active.prefix))))
+                active.canvases +=
+                    layerCanvas(target.layer, ResizeBadges(listOf(target.center to label.removePrefix(active.prefix))))
             }
         }
     }
@@ -362,6 +371,7 @@ object AceResize {
 
     private fun visibleComponents(root: Component): List<Component> {
         val result = mutableListOf<Component>()
+
         fun visit(component: Component) {
             if (!component.isShowing) return
             result += component

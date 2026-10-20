@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:AceResizeAction.kt$AceResize$private fun dispatch(event: AWTEvent): Boolean</ID>
+    <ID>MagicNumber:AceResizeAction.kt$AceResize$100_000</ID>
+    <ID>MagicNumber:AceResizeAction.kt$AceResize.ResizeBadges$0x2E</ID>
+    <ID>MagicNumber:AceResizeAction.kt$AceResize.ResizeBadges$0x34</ID>
+    <ID>MagicNumber:AceResizeAction.kt$AceResize.ResizeBadges$0x40</ID>
+    <ID>MagicNumber:AceResizeAction.kt$AceResize.ResizeBadges$4</ID>
+    <ID>MaxLineLength:AceResizeAction.kt$AceResize$active.canvases += layerCanvas(target.layer, ResizeBadges(listOf(target.center to label.removePrefix(active.prefix))))</ID>
+    <ID>MaxLineLength:AceResizeAction.kt$AceResize$val toolWindowRect = SwingUtilities.convertRectangle(toolWindow, Rectangle(0, 0, toolWindow.width, toolWindow.height), layer)</ID>
+    <ID>ReturnCount:AceResizeAction.kt$AceResize$fun start(editor: Editor)</ID>
+    <ID>ReturnCount:AceResizeAction.kt$AceResize$private fun dispatch(event: AWTEvent): Boolean</ID>
+    <ID>TooManyFunctions:AceResizeAction.kt$AceResize</ID>
+  </CurrentIssues>
+</SmellBaseline>
